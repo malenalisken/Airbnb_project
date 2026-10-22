@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
+from pathlib import Path
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
@@ -9,8 +10,9 @@ from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 # =====================================================================
 # 1. DATARENSING (Klargjøring av parametere og målvariabel)
 # =====================================================================
-# Last inn datasettet (erstatt med riktig filnavn hvis nødvendig)
-df = pd.read_csv('listings.csv')
+# Last inn rådata fra prosjektets data-mappe, relativt til denne fila
+data_path = Path(__file__).resolve().parent / "data" / "raw" / "listings (1).csv"
+df = pd.read_csv(data_path)
 
 # Rens priskolonnen (fjerner $, kr, komma og mellomrom)
 if df['price'].dtype == 'object':
@@ -25,14 +27,16 @@ df = df.dropna(subset=['price'])
 
 # Velg ut de mest relevante parameterne for prisprediksjon
 features = [
+    'neighbourhood_cleansed',
+    'room_type',
     'accommodates', 
+    #'bathrooms_text',
     'bedrooms', 
     'beds', 
-    'minimum_nights', 
+    #'minimum_nights', #hvor mange netter bruker minst må tilbringe i airbnb
     'number_of_reviews', 
-    'review_scores_rating', 
-    'room_type', 
-    'neighbourhood_cleansed'
+    'review_scores_rating'
+    
 ]
 
 X = df[features].copy()
@@ -89,5 +93,4 @@ print(f"  - MAE (Gjennomsnittlig feil): {mean_absolute_error(y_test, y_pred_gb):
 print(f"  - R² Score (Forklaringsgrad): {r2_score(y_test, y_pred_gb):.4f}")
 print(f"  - RMSE: {np.sqrt(mean_squared_error(y_test, y_pred_gb)):.2f} NOK")
 print("====================================")
-
 

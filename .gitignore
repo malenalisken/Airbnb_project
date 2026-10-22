@@ -1,0 +1,5 @@
+.venv/
+__pycache__/
+/analysis_output/
+/data/raw/calendar (1).csv
+/data/cleaning/listings_malena.ipynb
