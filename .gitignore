@@ -1,5 +1,5 @@
 .venv/
 __pycache__/
 /analysis_output/
-/data/raw/calendar (1).csv
-/data/processed/listings_malena.ipynb
+/data/raw/
+/data/processed/
