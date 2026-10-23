@@ -1,5 +1,0 @@
-from analyse import run_guest_price_analysis
-
-
-if __name__ == "__main__":
-    run_guest_price_analysis()
