@@ -10,54 +10,29 @@ from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 # =====================================================================
 # 1. DATARENSING (Klargjøring av parametere og målvariabel)
 # =====================================================================
-# Last inn rådata fra prosjektets data-mappe, relativt til denne fila
-data_path = Path(__file__).resolve().parent / "data" / "raw" / "listings (1).csv"
-df = pd.read_csv(data_path)
+# Last inn det rensede datasettet fra prosjektets data-mappe
+listings_path = Path(__file__).resolve().parent / "data" / "cleaning" / "listings_clean.csv"
+df_model = pd.read_csv(listings_path)
 
-# Rens priskolonnen (fjerner $, kr, komma og mellomrom)
-if df['price'].dtype == 'object':
-    df['price'] = df['price'].str.replace('$', '', regex=False)
-    df['price'] = df['price'].str.replace('kr', '', regex=False)
-    df['price'] = df['price'].str.replace(',', '', regex=False)
-    df['price'] = df['price'].str.replace(' ', '', regex=False)
-    df['price'] = df['price'].astype(float)
-
-# SIKRING: Fjern rader der målvariabelen (pris) mangler helt (NaN)
-df = df.dropna(subset=['price'])
-
-# Velg ut de mest relevante parameterne for prisprediksjon
-features = [
-    'neighbourhood_cleansed',
-    'room_type',
-    'accommodates', 
-    #'bathrooms_text',
-    'bedrooms', 
-    'beds', 
-    #'minimum_nights', #hvor mange netter bruker minst må tilbringe i airbnb
-    'number_of_reviews', 
-    'review_scores_rating'
-    
-]
-
-X = df[features].copy()
-y = df['price']
+X = df_model.drop(columns = ['log_price']).copy()
+y = df_model['log_price']
 
 # Håndter manglende verdier i parameterne (fyller NaN med medianen)
-X = X.fillna(X.median(numeric_only=True))
+#X = X.fillna(X.median(numeric_only=True))
 
 # Konverter kategoriske tekst-paramatere til tall (One-Hot Encoding)
-X = pd.get_dummies(X, columns=['room_type', 'neighbourhood_cleansed'], drop_first=True)
+X = pd.get_dummies(X, columns=['neighbourhood_cleansed'], drop_first=True)
 
 # =====================================================================
 # 2. EDA (Analyse og Visualisering med Heat Map)
 # =====================================================================
-# Lager et korrelasjons-heatmap for å analysere sammenhengene med pris
+# Lager et korrelasjons-heatmap for de numeriske kolonnene i df_model
 plt.figure(figsize=(10, 6))
-numeric_cols = ['price', 'accommodates', 'bedrooms', 'beds', 'minimum_nights', 'number_of_reviews', 'review_scores_rating']
-correlation_matrix = df[numeric_cols].corr()
+numeric_cols = df_model.select_dtypes(include=np.number).columns
+correlation_matrix = df_model[numeric_cols].corr()
 
 sns.heatmap(correlation_matrix, annot=True, cmap='coolwarm', fmt=".2f", linewidths=0.5)
-plt.title('EDA: Sammenheng mellom parametere og pris (Oslo Airbnb)')
+plt.title('EDA: Sammenheng mellom numeriske variabler og log-pris (Oslo Airbnb)')
 plt.show()
 
 
@@ -84,13 +59,12 @@ y_pred_gb = gb_model.predict(X_test)
 # =====================================================================
 print("====== EVALUERING AV MODELLER ======")
 print(f"Random Forest Regressor:")
-print(f"  - MAE (Gjennomsnittlig feil): {mean_absolute_error(y_test, y_pred_rf):.2f} NOK")
+print(f"  - MAE (Gjennomsnittlig feil): {mean_absolute_error(y_test, y_pred_rf):.2f} log-price units")
 print(f"  - R² Score (Forklaringsgrad): {r2_score(y_test, y_pred_rf):.4f}")
-print(f"  - RMSE: {np.sqrt(mean_squared_error(y_test, y_pred_rf)):.2f} NOK\n")
+print(f"  - RMSE: {np.sqrt(mean_squared_error(y_test, y_pred_rf)):.2f} log-price units\n")
 
 print(f"Gradient Boosting Regressor:")
-print(f"  - MAE (Gjennomsnittlig feil): {mean_absolute_error(y_test, y_pred_gb):.2f} NOK")
+print(f"  - MAE (Gjennomsnittlig feil): {mean_absolute_error(y_test, y_pred_gb):.2f} log-price units")
 print(f"  - R² Score (Forklaringsgrad): {r2_score(y_test, y_pred_gb):.4f}")
-print(f"  - RMSE: {np.sqrt(mean_squared_error(y_test, y_pred_gb)):.2f} NOK")
+print(f"  - RMSE: {np.sqrt(mean_squared_error(y_test, y_pred_gb)):.2f} log-price units")
 print("====================================")
-
