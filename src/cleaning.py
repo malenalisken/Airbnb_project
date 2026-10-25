@@ -111,10 +111,6 @@ df_clean = df_clean[df_clean["minimum_nights"] <= 28]
 # If has a rating: map to 1 if it has rating and 0 if not
 df_clean["has_rating"] = df_clean["review_scores_rating"].notna().astype(int)
 
-#-----------------------------------------------------------------------
-#.......................................................................
-# Might want to do this in the kfold instead
-
 # Review_score: do a weighted rating with bayesian-average , replace no rating with the median
 m = df_clean["number_of_reviews"].median()  
 if m == 0:
@@ -127,20 +123,22 @@ R = df_clean["review_scores_rating"]
 df_clean["weighted_rating"] = (v / (v + m)) * R + (m / (v + m)) * C
 # Listings with no reviews get the typical rating
 df_clean["weighted_rating"] = df_clean["weighted_rating"].fillna(C)
-df_clean = df_clean.drop(columns=["review_scores_rating"])
+df_clean = df_clean.drop(columns=["review_scores_rating", "number_of_reviews"])
 
-#.....................................................................
-#---------------------------------------------------------------------
 
 #check if any NaN values in the dataframe
 nan_counts = df_clean.isna().sum()
 if nan_counts.any():
     raise ValueError(f"df_clean contains NaN values:\n{nan_counts[nan_counts > 0]}")
 
-# Tranformation of target column, accommodates and minimum_nights
+# Tranformation of target column and minimum_nights
 df_clean["log_price"] = np.log(df_clean["price"])
-df_clean["accommodates_log"] = np.log(df_clean["accommodates"])
 df_clean["minimum_nights_log"] = np.log(df_clean["minimum_nights"])
+
+# Neighbourhoods: remove spacing in values 
+df_clean["neighbourhood_cleansed"] = (df_clean["neighbourhood_cleansed"].str.strip().str.replace(" ", "_"))
+
+print(df_clean.columns.to_list())
 
 PROCESSED_DATA.parent.mkdir(parents=True, exist_ok=True)
 df_clean.to_csv(PROCESSED_DATA)
