@@ -1,5 +1,7 @@
 .venv/
 __pycache__/
-/analysis_output/
-/data/raw/
+/data/raw/listings.csv
 /data/processed/
+!/data/processed/.gitkeep
+/results/*
+!/results/.gitkeep
