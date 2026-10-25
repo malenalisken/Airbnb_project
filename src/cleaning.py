@@ -16,7 +16,9 @@ Steps:
 5. Create has_rating and a weighted (Bayesian-average) rating, so listings
    with few reviews are pulled toward the median rating.
 6. Check that no missing values remain, add log-transformed versions of
-   price, accommodates and minimum_nights, and save the result.
+   price, accommodates and minimum_nights.
+7. Group Stovner/Grorud/Alna, drop Marka, add neighbourhood dummies
+   (dummy_<name>, Sentrum as baseline) and save the result.
 
 Run from anywhere with:  python src/cleaning.py
 """
@@ -137,6 +139,17 @@ df_clean["minimum_nights_log"] = np.log(df_clean["minimum_nights"])
 
 # Neighbourhoods: remove spacing in values 
 df_clean["neighbourhood_cleansed"] = (df_clean["neighbourhood_cleansed"].str.strip().str.replace(" ", "_"))
+df_clean['neighbourhood_grouped'] = df_clean['neighbourhood_cleansed'].replace({
+    "Stovner": "Stovner/Grorud/Alna",
+    "Grorud": "Stovner/Grorud/Alna",
+    "Alna": "Stovner/Grorud/Alna",
+})
+df_clean= df_clean[df_clean['neighbourhood_cleansed'] != 'Marka'].copy()
+
+# Neighbourhood dummies: one column per grouped neighbourhood, Sentrum = baseline (no column)
+dummies = pd.get_dummies(df_clean['neighbourhood_grouped'], prefix="dummy", dtype=int)
+dummies = dummies.drop(columns="dummy_Sentrum")
+df_clean = pd.concat([df_clean, dummies], axis=1)
 
 print(df_clean.columns.to_list())
 

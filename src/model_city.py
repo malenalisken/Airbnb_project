@@ -14,26 +14,14 @@ df = pd.read_csv(PROCESSED_DATA)
 features = ['host_is_superhost', 'is_house', 'accommodates', 'bedrooms',
             'bathrooms', 'minimum_nights_log', 'has_rating', 'weighted_rating']
 
-# Same grouping as the area models, and Marka dropped,
-# so city and area models are evaluated on the same listings
-df['neighbourhood_grouped'] = df['neighbourhood_cleansed'].replace({
-    "Stovner": "Stovner/Grorud/Alna",
-    "Grorud": "Stovner/Grorud/Alna",
-    "Alna": "Stovner/Grorud/Alna",
-})
-df_city = df[df['neighbourhood_grouped'] != 'Marka'].copy()
 
-# Neighbourhood dummies, Sentrum = baseline (no column).
-# Any dummy_ columns from cleaning are removed first so they aren't duplicated.
-df_city = df_city.drop(columns=df_city.filter(like="dummy_").columns)
-dummies = pd.get_dummies(df_city['neighbourhood_grouped'], prefix="dummy", dtype=int)
-dummies = dummies.drop(columns="dummy_Sentrum")
-df_city = pd.concat([df_city, dummies], axis=1)
+# Grouping, Marka removal and neighbourhood dummies are done in cleaning.py
+df_city = df.copy()
 
 # Every candidate variable, with the columns that belong to it.
 # The dummies together are ONE variable: neighbourhood.
 candidates = {feature: [feature] for feature in features}
-candidates["neighbourhood"] = dummies.columns.tolist()
+candidates["neighbourhood"] = df_city.filter(like="dummy_").columns.tolist()
 
 #-------------------------------------------------------------------------------
 # Linear regression per variable against log_price
