@@ -10,13 +10,16 @@ Inside Airbnb, Oslo, listings.csv.gz (snapshot: <25.september>) from https://ins
 Unzip it to data/raw/listings.csv.
 
 ## How to run
+```bash
 pip install -r requirements.txt
 python src/cleaning.py
 python src/model_city.py
 python src/model_district.py
-EDA : notebooks/listings.ipynb
+```
+
+EDA: `notebooks/listings.ipynb`
 
 ## Contributors
-Niyat Tesfaghabr
-Rohan Uteng 
-Malena Lisken
+- Niyat Tesfaghabr
+- Rohan Uteng 
+- Malena Lisken
