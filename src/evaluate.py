@@ -1,7 +1,8 @@
 import numpy as np
 import pandas as pd
 from sklearn.base import clone
-from sklearn.model_selection import KFold
+from sklearn.model_selection import KFold, GridSearchCV
+from sklearn.ensemble import RandomForestRegressor, HistGradientBoostingRegressor
 from sklearn.metrics import r2_score, mean_squared_error, mean_absolute_error
 
 def adjusted_r2(r2, n, p):
@@ -129,3 +130,50 @@ def nested_backward_selection(df, model, candidates, target="log_price",
  
     folds = pd.DataFrame(fold_rows)
     return folds
+
+
+
+RF_PARAM_GRID = {"min_samples_leaf": [10, 20],
+                 "max_features":     [2,4]}
+
+def tuned_rf(param_grid=RF_PARAM_GRID, n_trees=300, inner_folds=3, seed=42):
+    """Random forest that tunes its settings with inner CV each time it is fitted."""
+    return GridSearchCV(
+        RandomForestRegressor(n_estimators=n_trees, random_state=seed, n_jobs=-1),
+        param_grid,
+        cv=KFold(n_splits=inner_folds, shuffle=True, random_state=seed),
+        scoring="r2")
+
+def nested_cv_tuned(df, search, features, target="log_price", outer_folds=5, seed=42):
+    """Nested CV for a self-tuning model (e.g. tuned_rf()): tuning happens inside
+    each outer training part, scoring on the outer test fold.
+
+    Returns one row per outer fold with the chosen settings and its scores."""
+    X, y = df[features], df[target]
+    outer = KFold(n_splits=outer_folds, shuffle=True, random_state=seed)
+
+    fold_rows = []
+    for i, (train_idx, test_idx) in enumerate(outer.split(X), start=1):
+        fitted = clone(search).fit(X.iloc[train_idx], y.iloc[train_idx])
+        pred = fitted.predict(X.iloc[test_idx])
+        fold_rows.append({"fold": i,
+                          **fitted.best_params_,
+                          "inner_r2": fitted.best_score_,
+                          **price_metrics(y.iloc[test_idx], pred, adjusted=False)})
+
+    return pd.DataFrame(fold_rows)
+
+GB_PARAM_GRID = {"learning_rate":    [0.5, 0.1],
+                 "max_leaf_nodes":   [10, 25],
+                 "min_samples_leaf": [20, 50]}
+
+def tuned_gb(param_grid=GB_PARAM_GRID, max_trees=500, inner_folds=3, seed=42):
+    """Gradient boosting that tunes its settings with inner CV each time it is fitted.
+    Early stopping decides the number of trees automatically."""
+    return GridSearchCV(
+        HistGradientBoostingRegressor(max_iter=max_trees, early_stopping=True,
+                                      validation_fraction=0.1, n_iter_no_change=20,
+                                      random_state=seed),
+        param_grid,
+        cv=KFold(n_splits=inner_folds, shuffle=True, random_state=seed),
+        scoring="r2")

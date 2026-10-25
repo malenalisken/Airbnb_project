@@ -1,9 +1,10 @@
 import pandas as pd
-
+import matplotlib.pyplot as plt
 from pathlib import Path
 from sklearn.linear_model import LinearRegression
+from sklearn.tree import DecisionTreeRegressor, plot_tree
 
-from evaluate import cross_validate, backward_selection, nested_backward_selection
+from evaluate import cross_validate, backward_selection, nested_backward_selection, tuned_rf, nested_cv_tuned, tuned_gb
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 PROCESSED_DATA = PROJECT_ROOT / "data" / "processed" / "listings_clean.csv"
@@ -86,3 +87,41 @@ folds["n"] = len(df_city)
 
 print(f'\nNested CV per outer fold:\n{folds.round(3)}')
 folds.to_csv(RESULTS / "city_nested_folds.csv", index=False)
+
+#-------------------------------------------------------------------------------
+# Random forest with all variables (features + neighbourhood), nested CV
+#-------------------------------------------------------------------------------
+rf_folds = nested_cv_tuned(df_city, tuned_rf(), all_columns)
+rf_folds["n"] = len(df_city)
+
+print(f'\nRandom forest nested CV per outer fold:\n{rf_folds.round(3)}')
+rf_folds.to_csv(RESULTS / "city_rf_nested_folds.csv", index=False)
+
+# One summary row: mean and std of the outer-fold scores
+rf_summary = pd.DataFrame([{
+    "n":        len(df_city),
+    "r2":       rf_folds["r2"].mean(),   "r2_std":   rf_folds["r2"].std(),
+    "rmse":     rf_folds["rmse"].mean(), "rmse_std": rf_folds["rmse"].std(),
+    "mae":      rf_folds["mae"].mean(),  "mae_std":  rf_folds["mae"].std(),
+}])
+print(f'\nRandom forest city (nested CV):\n{rf_summary.round(3)}')
+rf_summary.to_csv(RESULTS / "city_rf_summary.csv", index=False)
+
+
+#-------------------------------------------------------------------------------
+# Gradient boosting with all variables (features + neighbourhood), nested CV
+#-------------------------------------------------------------------------------
+gb_folds = nested_cv_tuned(df_city, tuned_gb(), all_columns)
+gb_folds["n"] = len(df_city)
+
+print(f'\nGradient boosting nested CV per outer fold:\n{gb_folds.round(3)}')
+gb_folds.to_csv(RESULTS / "city_gb_nested_folds.csv", index=False)
+
+gb_summary = pd.DataFrame([{
+    "n":    len(df_city),
+    "r2":   gb_folds["r2"].mean(),   "r2_std":   gb_folds["r2"].std(),
+    "rmse": gb_folds["rmse"].mean(), "rmse_std": gb_folds["rmse"].std(),
+    "mae":  gb_folds["mae"].mean(),  "mae_std":  gb_folds["mae"].std(),
+}])
+print(f'\nGradient boosting city (nested CV):\n{gb_summary.round(3)}')
+gb_summary.to_csv(RESULTS / "city_gb_summary.csv", index=False)
