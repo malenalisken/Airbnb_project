@@ -88,3 +88,44 @@ def backward_selection(df, model, candidates, target="log_price", n_folds=5):
  
     return selected, best_scores, pd.DataFrame(history)
  
+
+def nested_backward_selection(df, model, candidates, target="log_price",
+                              outer_folds=5, seed=42):
+    """
+    Split data using kfold keeping one fold for testing and the other folds for
+    finding model using backwards selection. Model metrics is then calculated 
+    by testing on outer fold.
+ 
+    Returns
+      folds     : one row per outer fold (what was selected, inner vs outer score)
+    """
+    if isinstance(candidates, dict):
+        groups = dict(candidates)
+    else:
+        groups = {c: [c] for c in candidates}
+ 
+    outer = KFold(n_splits=outer_folds, shuffle=True, random_state=seed)
+ 
+    fold_rows, kept = [], []
+    for i, (train_idx, test_idx) in enumerate(outer.split(df), start=1):
+        train, test = df.iloc[train_idx], df.iloc[test_idx]
+ 
+        # Inner loop: choose variables using the training part only
+        selected, inner_scores, _ = backward_selection(train, model, groups,
+                                                       target)
+        cols = [col for name in selected for col in groups[name]]
+ 
+        # Refit on the full outer training part, score on the outer test fold
+        fitted = clone(model).fit(train[cols], train[target])
+        pred = fitted.predict(test[cols])
+        outer_scores = price_metrics(test[target], pred, len(cols))
+ 
+        kept.append(selected)
+        fold_rows.append({"fold": i,
+                          "n_selected": len(selected),
+                          "selected_features": ", ".join(selected),
+                          "inner_r2_adj": inner_scores["r2_adj"],
+                          **outer_scores})
+ 
+    folds = pd.DataFrame(fold_rows)
+    return folds

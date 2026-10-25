@@ -4,7 +4,7 @@ import pandas as pd
 from pathlib import Path
 from sklearn.linear_model import LinearRegression
 
-from evaluate import cross_validate, backward_selection
+from evaluate import cross_validate, backward_selection, nested_backward_selection
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -72,3 +72,16 @@ results_df = (pd.DataFrame(results)
                 .reset_index(drop=True))
 print(results_df.round(3))
 results_df.to_csv(RESULTS / "area_backward_selection.csv", index=False)
+
+#-------------------------------------------------------------------------------
+# Nested CV backwards regression: estimate of how well backward selection performs
+#-------------------------------------------------------------------------------
+ 
+all_folds = []
+for area, group in df_area.groupby('neighbourhood_grouped'):
+    folds = nested_backward_selection(group, LinearRegression(), features)
+    all_folds.append(folds.assign(area=area, n=len(group)))
+ 
+folds_df = pd.concat(all_folds).reset_index(drop=True)
+print(f'\nNested CV per area and outer fold:\n{folds_df.round(3)}')
+folds_df.to_csv(RESULTS / "area_nested_folds.csv", index=False)

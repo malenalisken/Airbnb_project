@@ -3,7 +3,7 @@ import pandas as pd
 from pathlib import Path
 from sklearn.linear_model import LinearRegression
 
-from evaluate import cross_validate, backward_selection
+from evaluate import cross_validate, backward_selection, nested_backward_selection
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 PROCESSED_DATA = PROJECT_ROOT / "data" / "processed" / "listings_clean.csv"
@@ -77,3 +77,12 @@ results_df = pd.DataFrame([{"n_selected": len(selected),
                             **scores}])
 print(f'\n{results_df.round(3)}')
 results_df.to_csv(RESULTS / "city_backward_selection.csv", index=False)
+
+#-------------------------------------------------------------------------------
+# Nested CV backwards regression: estimate of how well backward selection performs
+#-------------------------------------------------------------------------------
+folds = nested_backward_selection(df_city, LinearRegression(), candidates)
+folds["n"] = len(df_city)
+
+print(f'\nNested CV per outer fold:\n{folds.round(3)}')
+folds.to_csv(RESULTS / "city_nested_folds.csv", index=False)
