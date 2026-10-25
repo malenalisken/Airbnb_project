@@ -26,3 +26,5 @@ EDA: `notebooks/listings.ipynb`
 
 ## Status
 This pipeline is a work in progress. Data loading, cleaning, exploratory analysis and model training are implemented. Model evaluation and comparison, as well as the GenAI agent, will be added as part of the final project.
+
+The version submitted for mandatory assignment 2 is tagged `oblig2`.
