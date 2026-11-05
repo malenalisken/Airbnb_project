@@ -33,6 +33,55 @@ PROCESSED_DATA = PROJECT_ROOT / "data" / "processed" / "listings_clean.csv"
 df = pd.read_csv(RAW_DATA)
 
 
+def basic_clean(df):
+    features_to_keep = ['neighbourhood_cleansed', 'latitude', 'longitude',
+                        'property_type', 'accommodates', 'bathrooms_text', 'bedrooms', 'beds',
+                        'price_quote_checkin_date', 'price_quote_checkout_date', 'price_quote_price_per_night']
+    df_bc = df[features_to_keep].copy()
+
+    # removing outliers in price
+    cutoff = df_bc['price_quote_price_per_night'].quantile(0.99)
+    df_bc = df_bc.loc[df_bc['price_quote_price_per_night'] <= cutoff]
+    df_bc = df_bc.lox[df_bc['price_quote_price_per_night']]
+    df_bc = df_bc.rename(column = {'price_quote_price_per_night' : 'price_per_night'})
+
+    # Property_type : keep property types that are relativly standard for city
+    entire_space = [
+        "Entire rental unit", "Entire condo", "Entire home", "Entire townhouse",
+        "Entire loft", "Entire villa", "Entire serviced apartment", "Entire guest suite",
+        "Entire guesthouse", "Tiny home", "Entire cabin",
+    ]
+    df_bc = df_bc[df_bc["property_type"].isin(entire_space)]
+    #replace categories with home = 1 apt = 0 
+    homes = [
+        "Entire home", "Entire townhouse", "Entire villa",
+        "Entire guesthouse", "Tiny home", "Entire cabin",
+    ]
+    df_bc["property_type"] = df_bc["property_type"].isin(homes).astype(int)
+    df_bc = df_bc.rename(columns={"property_type": "is_house"})
+
+    # Bathrooms: take out the number from text and remove listings with 0 bathrooms
+    df_bc["bathrooms"] = df_bc["bathrooms_text"].str.extract(r"(\d+\.?\d*)")[0].astype(float)
+    df_bc.loc[df_bc["bathrooms_text"] == "Half-bath", "bathrooms"] = 0.5
+    df_bc = df_bc[df_clean["bathrooms"] > 0]
+    df_bc = df_bc.drop(columns=["bathrooms_text"])
+
+    # Nights: create a column with number of nights base on checkin and checout and cut off long term stays
+    df_bc['price_quote_checkin_date'] = pd.to_datetime(df_bc['price_quote_checkin_date'])
+    df_bc['price_quote_checkout_date'] = pd.to_datetime(df_bc['price_quote_checkout_date'])
+
+    df_bc['n_nights'] = df_bc['price_quote_checkout_date'] - df_bc['price_quote_checkin_date']
+    df_bc= df_bc[df_bc["minimum_nights"] <= 28]
+
+    #Checkin month based on checkin date
+    df_bc['checkin_month'] = df_bc['price_quote_checkin_date'].dt.month
+    df_bc['checkout_month'] = df_bc['price_quote_checkout_date'].dt.month
+
+
+
+
+
+
 #deciding which columns to keep for cleaning
 wanted_cols = [
     "id",
