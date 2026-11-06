@@ -34,16 +34,16 @@ df = pd.read_csv(RAW_DATA)
 
 
 def basic_clean(df):
-    features_to_keep = ['neighbourhood_cleansed', 'latitude', 'longitude',
+    features_to_keep = ['last_scraped', 'neighbourhood_cleansed', 'latitude', 'longitude',
                         'property_type', 'accommodates', 'bathrooms_text', 'bedrooms', 'beds',
                         'price_quote_checkin_date', 'price_quote_checkout_date', 'price_quote_price_per_night']
     df_bc = df[features_to_keep].copy()
 
-    # removing outliers in price
+    # removing outliers in price and listings where price is nan
     cutoff = df_bc['price_quote_price_per_night'].quantile(0.99)
     df_bc = df_bc.loc[df_bc['price_quote_price_per_night'] <= cutoff]
-    df_bc = df_bc.lox[df_bc['price_quote_price_per_night']]
-    df_bc = df_bc.rename(column = {'price_quote_price_per_night' : 'price_per_night'})
+    df_bc = df_bc.loc[df_bc['price_quote_price_per_night'].notna()]
+    df_bc = df_bc.rename(columns = {'price_quote_price_per_night' : 'price_per_night'})
 
     # Property_type : keep property types that are relativly standard for city
     entire_space = [
@@ -63,20 +63,26 @@ def basic_clean(df):
     # Bathrooms: take out the number from text and remove listings with 0 bathrooms
     df_bc["bathrooms"] = df_bc["bathrooms_text"].str.extract(r"(\d+\.?\d*)")[0].astype(float)
     df_bc.loc[df_bc["bathrooms_text"] == "Half-bath", "bathrooms"] = 0.5
-    df_bc = df_bc[df_clean["bathrooms"] > 0]
+    df_bc = df_bc[df_bc["bathrooms"] > 0]
     df_bc = df_bc.drop(columns=["bathrooms_text"])
 
     # Nights: create a column with number of nights base on checkin and checout and cut off long term stays
     df_bc['price_quote_checkin_date'] = pd.to_datetime(df_bc['price_quote_checkin_date'])
     df_bc['price_quote_checkout_date'] = pd.to_datetime(df_bc['price_quote_checkout_date'])
 
-    df_bc['n_nights'] = df_bc['price_quote_checkout_date'] - df_bc['price_quote_checkin_date']
-    df_bc= df_bc[df_bc["minimum_nights"] <= 28]
+    df_bc['n_nights'] = (df_bc['price_quote_checkout_date'] - df_bc['price_quote_checkin_date']).dt.days
+    df_bc = df_bc[df_bc['n_nights'] <= 28]
 
+    # Days until checkin:
+    df_bc['last_scraped'] = pd.to_datetime(df_bc['last_scraped'])
+    df_bc['days_til_checkin'] = (df_bc['price_quote_checkout_date'] - df_bc['price_quote_checkin_date'])
+    df_bc = df_bc.drop(columns = ['last_scraped'])
     #Checkin month based on checkin date
     df_bc['checkin_month'] = df_bc['price_quote_checkin_date'].dt.month
-    df_bc['checkout_month'] = df_bc['price_quote_checkout_date'].dt.month
 
+    df_bc = df_bc.drop(columns = ['price_quote_checkout_date', 'price_quote_checkin_date'])
+
+    return df_bc
 
 
 
