@@ -34,9 +34,18 @@ df = pd.read_csv(RAW_DATA)
 
 
 def basic_clean(df):
-    features_to_keep = ['last_scraped', 'neighbourhood_cleansed', 'latitude', 'longitude',
-                        'property_type', 'accommodates', 'bathrooms_text', 'bedrooms', 'beds',
-                        'price_quote_checkin_date', 'price_quote_checkout_date', 'price_quote_price_per_night']
+    features_to_keep = ['last_scraped', 
+                        'neighbourhood_cleansed', 
+                        'latitude', 
+                        'longitude',
+                        'property_type', 
+                        'accommodates', 
+                        'bathrooms_text', 
+                        'bedrooms', 
+                        'beds',
+                        'price_quote_checkin_date', 
+                        'price_quote_checkout_date', 
+                        'price_quote_price_per_night']
     df_bc = df[features_to_keep].copy()
 
     # removing outliers in price and listings where price is nan
@@ -75,8 +84,9 @@ def basic_clean(df):
 
     # Days until checkin:
     df_bc['last_scraped'] = pd.to_datetime(df_bc['last_scraped'])
-    df_bc['days_til_checkin'] = (df_bc['price_quote_checkout_date'] - df_bc['price_quote_checkin_date'])
+    df_bc['days_til_checkin'] = (df_bc['price_quote_checkin_date'] - df_bc['last_scraped']).dt.days
     df_bc = df_bc.drop(columns = ['last_scraped'])
+    
     #Checkin month based on checkin date
     df_bc['checkin_month'] = df_bc['price_quote_checkin_date'].dt.month
 
@@ -84,129 +94,52 @@ def basic_clean(df):
 
     return df_bc
 
+def final_clean(df):
+    features_to_keep = {'log_price', 
+                        'price_per_night', 
+                        'accomodates', 
+                        'bedrooms', 
+                        'bathrooms', 
+                        'is_house', 
+                        'days_til_checkin', 
+                        'neighbourhood_cleansed', 
+                        'latitude', 
+                        'longitude', 
+                        'n_nights'}
+    
+    df_fc = df[features_to_keep].copy()
+
+    #cutoff for listings with more than 12 accomodations
+    df_fc = df_fc[df_fc["accommodates"] <= 12]
+
+    # Neighbourhoods: remove spacing in values 
+    df_fc["neighbourhood_cleansed"] = (df_fc["neighbourhood_cleansed"].str.strip().str.replace(" ", "_"))
+    df_fc['neighbourhood_grouped'] = df_fc['neighbourhood_cleansed'].replace({
+        "Stovner": "Stovner/Grorud/Alna",
+        "Grorud": "Stovner/Grorud/Alna",
+        "Alna": "Stovner/Grorud/Alna",
+    })
+    df_fc = df_fc[df_fc['neighbourhood_cleansed'] != 'Marka'].copy()
+
+    # Neighbourhood dummies: one column per grouped neighbourhood, Sentrum = baseline (no column)
+    dummies = pd.get_dummies(df_fc['neighbourhood_grouped'], prefix="dummy", dtype=int)
+    dummies = dummies.drop(columns="dummy_Sentrum")
+    df_fc = pd.concat([df_fc, dummies], axis=1)
+
+    #transformation of accomodates, days until checkin and price
+
+    #transformation of accomodates, days until checkin and price
+    df_fc['log_price'] = np.log(df_fc['price_per_night'])
+    df_fc['accommodates_log'] = np.log(df_fc['accommodates'])
+    # log1p = log(1 + x), since some listings have 0 days until checkin
+    df_fc['days_til_checkin_log'] = np.log1p(df_fc['days_til_checkin'])
+
+    return df_fc
 
 
 
 
-#deciding which columns to keep for cleaning
-wanted_cols = [
-    "id",
-    "host_is_superhost",
-    "neighbourhood_cleansed",
-    "property_type",
-    "room_type",
-    "accommodates",
-    "bathrooms_text",
-    "bedrooms",
-    "price",
-    "minimum_nights",
-    "number_of_reviews",
-    "review_scores_rating",
-]
-
-df_clean = df[wanted_cols].copy()
-
-# Id: Each listing should appear once in a single snapshot
-if not df_clean["id"].is_unique:
-    raise ValueError("Duplicate listing IDs found. Is listings.csv.gz a single snapshot?")
-
-# Use id as the index: not a model feature, but still traceable
-df_clean = df_clean.set_index("id")
 
 
-# Price: Start by cleaning the target column values to float values
-df_clean["price"] = df_clean["price"].str.replace("$", "", regex=False)
-df_clean["price"] = df_clean["price"].str.replace(",", "", regex=False)
-df_clean["price"] = df_clean["price"].str.replace(" ", "", regex=False)
-df_clean["price"] = df_clean["price"].astype(float)
-
-# Remove rows with no price or 0
-df_clean = df_clean.dropna(subset=["price"])
-df_clean = df_clean[df_clean["price"] > 0]
-# Remove outliers
-cutoff = df_clean["price"].quantile(0.99)
-df_clean = df_clean[df_clean["price"] <= cutoff]
 
 
-# Host_is_superhost : make values binary, 1 if is superhost
-df_clean["host_is_superhost"] = df_clean["host_is_superhost"].map({"t": 1, "f": 0})
-
-# Property_type : keep property types that are relativly standard for city
-entire_space = [
-    "Entire rental unit", "Entire condo", "Entire home", "Entire townhouse",
-    "Entire loft", "Entire villa", "Entire serviced apartment", "Entire guest suite",
-    "Entire guesthouse", "Tiny home", "Entire cabin",
-]
-df_clean = df_clean[df_clean["property_type"].isin(entire_space)]
-
-#replace categories with home = 1 apt = 0 
-homes = [
-    "Entire home", "Entire townhouse", "Entire villa",
-    "Entire guesthouse", "Tiny home", "Entire cabin",
-]
-df_clean["property_type"] = df_clean["property_type"].isin(homes).astype(int)
-df_clean = df_clean.rename(columns={"property_type": "is_house"})
-
-# Room_type: should only be entire home/apt given cleaning of property type
-if not df_clean["room_type"].eq("Entire home/apt").all():
-    raise ValueError("room_type contains values other than 'Entire home/apt'")
-df_clean = df_clean.drop(columns = ['room_type'])
-
-# Bathrooms: take out the number from text and remove listings with 0 bathrooms
-df_clean["bathrooms"] = df_clean["bathrooms_text"].str.extract(r"(\d+\.?\d*)")[0].astype(float)
-df_clean.loc[df_clean["bathrooms_text"] == "Half-bath", "bathrooms"] = 0.5
-df_clean = df_clean[df_clean["bathrooms"] > 0]
-
-df_clean = df_clean.drop(columns=["bathrooms_text"])
-
-# Outlier: remove listing with 13 accommodates
-df_clean = df_clean[df_clean["accommodates"] != 13]
-
-# Minimum_nights: remove all listings that require a long-time stay
-df_clean = df_clean[df_clean["minimum_nights"] <= 28]
-
-# If has a rating: map to 1 if it has rating and 0 if not
-df_clean["has_rating"] = df_clean["review_scores_rating"].notna().astype(int)
-
-# Review_score: do a weighted rating with bayesian-average , replace no rating with the median
-m = df_clean["number_of_reviews"].median()  
-if m == 0:
-    raise ValueError("Median number_of_reviews is 0; choose m manually")
-                               
-C = df_clean["review_scores_rating"].median()  
-v = df_clean["number_of_reviews"]
-R = df_clean["review_scores_rating"]
-
-df_clean["weighted_rating"] = (v / (v + m)) * R + (m / (v + m)) * C
-# Listings with no reviews get the typical rating
-df_clean["weighted_rating"] = df_clean["weighted_rating"].fillna(C)
-df_clean = df_clean.drop(columns=["review_scores_rating", "number_of_reviews"])
-
-
-#check if any NaN values in the dataframe
-nan_counts = df_clean.isna().sum()
-if nan_counts.any():
-    raise ValueError(f"df_clean contains NaN values:\n{nan_counts[nan_counts > 0]}")
-
-# Tranformation of target column and minimum_nights
-df_clean["log_price"] = np.log(df_clean["price"])
-df_clean["minimum_nights_log"] = np.log(df_clean["minimum_nights"])
-
-# Neighbourhoods: remove spacing in values 
-df_clean["neighbourhood_cleansed"] = (df_clean["neighbourhood_cleansed"].str.strip().str.replace(" ", "_"))
-df_clean['neighbourhood_grouped'] = df_clean['neighbourhood_cleansed'].replace({
-    "Stovner": "Stovner/Grorud/Alna",
-    "Grorud": "Stovner/Grorud/Alna",
-    "Alna": "Stovner/Grorud/Alna",
-})
-df_clean= df_clean[df_clean['neighbourhood_cleansed'] != 'Marka'].copy()
-
-# Neighbourhood dummies: one column per grouped neighbourhood, Sentrum = baseline (no column)
-dummies = pd.get_dummies(df_clean['neighbourhood_grouped'], prefix="dummy", dtype=int)
-dummies = dummies.drop(columns="dummy_Sentrum")
-df_clean = pd.concat([df_clean, dummies], axis=1)
-
-print(df_clean.columns.to_list())
-
-PROCESSED_DATA.parent.mkdir(parents=True, exist_ok=True)
-df_clean.to_csv(PROCESSED_DATA)
