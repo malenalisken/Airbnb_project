@@ -25,12 +25,7 @@ Run from anywhere with:  python src/cleaning.py
 
 import numpy as np
 import pandas as pd
-from pathlib import Path
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
-RAW_DATA = PROJECT_ROOT / "data" / "raw" / "listings.csv"
-PROCESSED_DATA = PROJECT_ROOT / "data" / "processed" / "listings_clean.csv"
-df = pd.read_csv(RAW_DATA)
 
 
 def basic_clean(df):
@@ -86,7 +81,7 @@ def basic_clean(df):
     df_bc['last_scraped'] = pd.to_datetime(df_bc['last_scraped'])
     df_bc['days_til_checkin'] = (df_bc['price_quote_checkin_date'] - df_bc['last_scraped']).dt.days
     df_bc = df_bc.drop(columns = ['last_scraped'])
-    
+
     #Checkin month based on checkin date
     df_bc['checkin_month'] = df_bc['price_quote_checkin_date'].dt.month
 
@@ -95,9 +90,8 @@ def basic_clean(df):
     return df_bc
 
 def final_clean(df):
-    features_to_keep = {'log_price', 
-                        'price_per_night', 
-                        'accomodates', 
+    features_to_keep = ['price_per_night', 
+                        'accommodates', 
                         'bedrooms', 
                         'bathrooms', 
                         'is_house', 
@@ -105,7 +99,7 @@ def final_clean(df):
                         'neighbourhood_cleansed', 
                         'latitude', 
                         'longitude', 
-                        'n_nights'}
+                        'n_nights']
     
     df_fc = df[features_to_keep].copy()
 
@@ -127,14 +121,26 @@ def final_clean(df):
     df_fc = pd.concat([df_fc, dummies], axis=1)
 
     #transformation of accomodates, days until checkin and price
-
-    #transformation of accomodates, days until checkin and price
     df_fc['log_price'] = np.log(df_fc['price_per_night'])
     df_fc['accommodates_log'] = np.log(df_fc['accommodates'])
     # log1p = log(1 + x), since some listings have 0 days until checkin
     df_fc['days_til_checkin_log'] = np.log1p(df_fc['days_til_checkin'])
 
     return df_fc
+
+
+if __name__ == "__main__":
+    from pathlib import Path
+
+    PROJECT_ROOT = Path(__file__).resolve().parents[1]
+    RAW_DATA = PROJECT_ROOT / "data" / "raw" / "listings.csv"
+    PROCESSED_DATA = PROJECT_ROOT / "data" / "processed" / "listings_clean.csv"
+
+    df = pd.read_csv(RAW_DATA)
+    df_clean = final_clean(basic_clean(df))
+    PROCESSED_DATA.parent.mkdir(parents=True, exist_ok=True)
+    df_clean.to_csv(PROCESSED_DATA, index=False)
+    print(df_clean.columns.to_list())
 
 
 
