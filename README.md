@@ -9,22 +9,24 @@ This project aims to address that problem by building a model that predicts the 
 Inside Airbnb, Oslo, listings.csv.gz (snapshot: <25.september>) from https://insideairbnb.com/get-the-data/.
 Unzip it to data/raw/listings.csv.
 
+
 ## How to run
 ```bash
 pip install -r requirements.txt
-python src/cleaning.py
-python src/model_city.py
-python src/model_district.py
+python src/cleaning.py            # cleaned data → data/processed/
+python src/city_model_LR.py       # linear regression, city
+python src/district_model_LR.py   # linear regression, per district
+python src/trees_model.py         # random forest + gradient boosting
+python src/final_model.py         # final model → models/final_gb.joblib
 ```
+Then run `notebooks/model_eval.ipynb` to compare the models.
 
-EDA: `notebooks/listings.ipynb`
+EDA: `notebooks/listings.ipynb` and `notebooks/relationships.ipynb`
+
 
 ## Contributors
 - Niyat Tesfaghabr
 - Rohan Uteng 
 - Malena Lisken
 
-## Status
-This pipeline is a work in progress. Data loading, cleaning, exploratory analysis and model training are implemented. Model evaluation and comparison, as well as the GenAI agent, will be added as part of the final project.
 
-The version submitted for mandatory assignment 2 is tagged `oblig2`.
