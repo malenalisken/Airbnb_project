@@ -1,27 +1,3 @@
-"""
-Cleans the raw Inside Airbnb listings data for price prediction.
-
-Input:  data/raw/listings.csv (download instructions in the README)
-Output: data/processed/listings_clean.csv, indexed by listing id
-
-Steps:
-1. Keep the columns used for modelling and set listing id as the index
-   (stops if any id appears more than once).
-2. Convert price to a number, drop listings with missing or zero price,
-   and remove the top 1% of prices as outliers.
-3. Keep only entire homes and apartments, and encode property type as
-   is_house (1 = house, 0 = apartment).
-4. Clean the remaining features: superhost as 0/1, bathrooms as a number,
-   and remove listings with 13 guests or a minimum stay over 28 nights.
-5. Create has_rating and a weighted (Bayesian-average) rating, so listings
-   with few reviews are pulled toward the median rating.
-6. Check that no missing values remain, add log-transformed versions of
-   price, accommodates and minimum_nights.
-7. Group Stovner/Grorud/Alna, drop Marka, add neighbourhood dummies
-   (dummy_<name>, Sentrum as baseline) and save the result.
-
-Run from anywhere with:  python src/cleaning.py
-"""
 
 import numpy as np
 import pandas as pd
