@@ -58,7 +58,7 @@ def predict_price(area: str, is_house: bool, accommodates: int, bedrooms: int,
                          'bedrooms': bedrooms, 'bathrooms': bathrooms,
                          'n_nights': n_nights, 'days_til_checkin': days_til_checkin,
                          'latitude': latitude, 'longitude': longitude}], columns=FEATURES)
-    model = joblib.load(ROOT / 'models/final_gb.joblib')
+    model = joblib.load(ROOT / 'final_gb.joblib')
     estimate = float(np.exp(model.predict(row)[0]))
     return {'estimated_price_per_night': round(estimate, 2),
             'area': matched, 'latitude': latitude, 'longitude': longitude,
