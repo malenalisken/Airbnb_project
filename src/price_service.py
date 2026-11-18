@@ -10,12 +10,12 @@ FEATURES = ['is_house', 'accommodates', 'bedrooms', 'bathrooms',
 
 
 def areas():
-    """Areas actually represented in the cleaned project dataset."""
-    df = pd.read_csv(ROOT / 'data/processed/listings_clean.csv',
-                     usecols=['neighbourhood_cleansed', 'latitude', 'longitude'])
+    """Read Oslo district coordinates from the project CSV."""
+    df = pd.read_csv(ROOT / 'data/processed/bydel_koordinater.csv')
     df = df.dropna()
     df['neighbourhood_cleansed'] = df['neighbourhood_cleansed'].str.replace('_', ' ', regex=False)
     return df
+
 
 
 def predict_price(area: str, is_house: bool, accommodates: int, bedrooms: int,
