@@ -31,7 +31,7 @@ def new_chat(role: str):
         raise RuntimeError('GEMINI_API_KEY mangler. Sett den i terminalen før du starter.')
     client = genai.Client(api_key=key)
     return client.chats.create(
-        model='gemini-2.5-flash',
+        model='gemini-3-flash-preview',
         config=types.GenerateContentConfig(
             system_instruction=INSTRUCTION + f'\nBrukerens rolle: {role}.',
             tools=[predict_price],
