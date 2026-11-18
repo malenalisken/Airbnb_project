@@ -6,4 +6,6 @@ seaborn==0.13.2
 pypalettes==0.2.2
 joblib==1.6.0
 ipykernel==7.4.0
+streamlit
+google-genai
 
