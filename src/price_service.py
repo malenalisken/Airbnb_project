@@ -63,5 +63,5 @@ def predict_price(area: str, is_house: bool, accommodates: int, bedrooms: int,
     return {'estimated_price_per_night': round(estimate, 2),
             'area': matched, 'latitude': latitude, 'longitude': longitude,
             'position_source': position_source,
-            'currency': 'verify_against_dataset',
+            'currency': 'NOK',
             'note': 'Model estimate, not guaranteed market price. Area median is a geographic proxy, not an actual listing address.'}
