@@ -154,3 +154,26 @@ def new_chat(role: str):
         ),
     )
 
+import time
+from google.genai.errors import ServerError
+
+
+def send_message_with_retry(chat, message, max_attempts=3):
+    for attempt in range(max_attempts):
+        try:
+            return chat.send_message(message)
+
+        except ServerError as error:
+            if error.code != 503:
+                raise
+
+            if attempt == max_attempts - 1:
+                raise
+
+            wait_seconds = 2 ** (attempt + 1)
+            print(
+                f"Gemini er midlertidig utilgjengelig. "
+                f"Prøver igjen om {wait_seconds} sekunder..."
+            )
+            time.sleep(wait_seconds)
+
