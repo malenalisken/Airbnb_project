@@ -2,9 +2,13 @@
 """Gemini Airbnb advisor using the project's Gradient Boosting model."""
 
 import os
+import time
+
 from google import genai
 from google.genai import types
+from google.genai.errors import ServerError
 from price_service import predict_price
+
 
 
 INSTRUCTION = """
@@ -142,7 +146,7 @@ def new_chat(role: str):
 
     _client = genai.Client(api_key=key)
 
-    return _client.chats.create(
+    chat = _client.chats.create(
         model="gemini-3-flash-preview",
         config=types.GenerateContentConfig(
             system_instruction=(
@@ -154,8 +158,7 @@ def new_chat(role: str):
         ),
     )
 
-import time
-from google.genai.errors import ServerError
+    return chat
 
 
 def send_message_with_retry(chat, message, max_attempts=3):
@@ -171,9 +174,12 @@ def send_message_with_retry(chat, message, max_attempts=3):
                 raise
 
             wait_seconds = 2 ** (attempt + 1)
+
             print(
                 f"Gemini er midlertidig utilgjengelig. "
                 f"Prøver igjen om {wait_seconds} sekunder..."
             )
+
             time.sleep(wait_seconds)
+
 
