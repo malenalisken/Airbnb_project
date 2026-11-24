@@ -143,7 +143,7 @@ def new_chat(role: str):
     _client = genai.Client(api_key=key)
 
     return _client.chats.create(
-        model="gemini-3.5-flash-lite",
+        model="gemini-3-flash-preview",
         config=types.GenerateContentConfig(
             system_instruction=(
                 INSTRUCTION
