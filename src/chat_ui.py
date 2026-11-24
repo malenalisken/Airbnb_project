@@ -375,6 +375,5 @@ def launch_chat():
     launched = True
 
 
-# Start the interface
-launch_chat()
+
 
