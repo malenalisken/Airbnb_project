@@ -197,6 +197,13 @@ def predict_price(
 
     # Validate coordinates
 
+    try:
+        latitude = float(latitude)
+        longitude = float(longitude)
+
+    except (TypeError, ValueError):
+        return {'error': 'Coordinates must be numeric.'}
+
     if not (
         np.isfinite(latitude)
         and np.isfinite(longitude)
@@ -254,5 +261,6 @@ def predict_price(
             'not an actual listing address.'
         )
     }
+
 
 
