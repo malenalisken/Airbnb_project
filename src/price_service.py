@@ -2,9 +2,6 @@
 """Prediction service for the project's existing final gradient boosting model."""
 
 from pathlib import Path
-from datetime import datetime, date
-from zoneinfo import ZoneInfo
-import re
 
 import joblib
 import numpy as np
@@ -23,83 +20,6 @@ FEATURES = [
     'latitude',
     'longitude'
 ]
-
-
-def calculate_days_until_checkin(checkin_date: str) -> int:
-    """Calculate days until check-in using Norwegian local date."""
-
-    today = datetime.now(ZoneInfo("Europe/Oslo")).date()
-
-    months = {
-        "januar": 1,
-        "februar": 2,
-        "mars": 3,
-        "april": 4,
-        "mai": 5,
-        "juni": 6,
-        "juli": 7,
-        "august": 8,
-        "september": 9,
-        "oktober": 10,
-        "november": 11,
-        "desember": 12
-    }
-
-    value = checkin_date.lower().strip()
-
-    # Accept ISO format: YYYY-MM-DD
-    try:
-        parsed = date.fromisoformat(value)
-
-    except ValueError:
-        parsed = None
-
-    if parsed is None:
-
-        # Accept dates such as:
-        # 10. desember
-        # 10.12
-        # 10.12.2026
-
-        match = re.fullmatch(
-            r"(\d{1,2})\.?\s*([a-zæøå]+|\d{1,2})\.?"
-            r"(?:\s*(\d{4}))?",
-            value
-        )
-
-        if not match:
-            raise ValueError(
-                "Invalid check-in date. "
-                "Use a date such as 10. desember or 10.12.2026."
-            )
-
-        day = int(match.group(1))
-        month_text = match.group(2)
-        year_text = match.group(3)
-
-        if month_text.isdigit():
-            month = int(month_text)
-        else:
-            month = months.get(month_text)
-
-        if month is None or not 1 <= month <= 12:
-            raise ValueError("Invalid month.")
-
-        year = int(year_text) if year_text else today.year
-
-        try:
-            parsed = date(year, month, day)
-        except ValueError:
-            raise ValueError("Invalid calendar date.")
-
-        # If no year was specified, use the next occurrence.
-        if year_text is None and parsed < today:
-            parsed = date(year + 1, month, day)
-
-    if parsed < today:
-        raise ValueError("Check-in date is in the past.")
-
-    return (parsed - today).days
 
 
 def areas():
@@ -124,7 +44,7 @@ def predict_price(
     accommodates: int,
     bedrooms: int,
     n_nights: int,
-    checkin_date: str,
+    days_til_checkin: int,
     is_house: bool | None = None,
     bathrooms: float | None = None,
     latitude: float | None = None,
@@ -134,8 +54,8 @@ def predict_price(
     Predict nightly Airbnb price using the trained
     Gradient Boosting model.
 
-    The check-in date is provided by the user.
-    Python calculates days until check-in.
+    The user must provide the number of days until check-in.
+    Python does not assume or calculate this value.
     """
 
     # Validate primary information
@@ -143,36 +63,49 @@ def predict_price(
     if not isinstance(area, str) or not area.strip():
         return {'error': 'A valid Oslo neighbourhood is required.'}
 
-    if not isinstance(accommodates, int) or isinstance(accommodates, bool):
+    if (
+        not isinstance(accommodates, int)
+        or isinstance(accommodates, bool)
+    ):
         return {'error': 'Number of guests must be an integer.'}
 
     if not 1 <= accommodates <= 12:
         return {'error': 'Number of guests must be between 1 and 12.'}
 
-    if not isinstance(bedrooms, int) or isinstance(bedrooms, bool) or bedrooms < 0:
+    if (
+        not isinstance(bedrooms, int)
+        or isinstance(bedrooms, bool)
+        or bedrooms < 0
+    ):
         return {'error': 'Bedrooms must be a non-negative integer.'}
 
-    if not isinstance(n_nights, int) or isinstance(n_nights, bool):
+    if (
+        not isinstance(n_nights, int)
+        or isinstance(n_nights, bool)
+    ):
         return {'error': 'Number of nights must be an integer.'}
 
     if not 1 <= n_nights <= 28:
         return {'error': 'Number of nights must be between 1 and 28.'}
 
-    # Calculate days until check-in in Python
-
-    if not isinstance(checkin_date, str) or not checkin_date.strip():
-        return {'error': 'A check-in date is required.'}
-
-    try:
-        days_til_checkin = calculate_days_until_checkin(checkin_date)
-    except ValueError as error:
-        return {'error': str(error)}
+    if (
+        not isinstance(days_til_checkin, int)
+        or isinstance(days_til_checkin, bool)
+        or days_til_checkin < 0
+    ):
+        return {
+            'error': (
+                'Days until check-in must be a '
+                'non-negative integer.'
+            )
+        }
 
     # Apply reasonable defaults for secondary information
 
     assumptions = []
 
     if is_house is None:
+
         if accommodates >= 6:
             return {
                 'error': (
@@ -182,6 +115,7 @@ def predict_price(
             }
 
         is_house = False
+
         assumptions.append(
             'Apartment assumed because no property type was specified.'
         )
@@ -190,6 +124,7 @@ def predict_price(
         return {'error': 'is_house must be true or false.'}
 
     if bathrooms is None:
+
         if accommodates >= 4:
             return {
                 'error': (
@@ -199,6 +134,7 @@ def predict_price(
             }
 
         bathrooms = 1.0
+
         assumptions.append(
             'One bathroom assumed for a group of 1-3 guests.'
         )
@@ -306,7 +242,6 @@ def predict_price(
         'bathrooms': bathrooms,
         'is_house': is_house,
         'n_nights': n_nights,
-        'checkin_date': checkin_date,
         'days_til_checkin': days_til_checkin,
         'latitude': latitude,
         'longitude': longitude,
@@ -319,4 +254,5 @@ def predict_price(
             'not an actual listing address.'
         )
     }
+
 
