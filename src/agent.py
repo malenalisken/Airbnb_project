@@ -39,7 +39,7 @@ The following information is required for every prediction:
 2. accommodates: Number of guests.
 3. bedrooms: Number of bedrooms.
 4. n_nights: Number of nights.
-5. checkin_date: Check-in date.
+5. days_til_checkin: Number of days until check-in.
 
 SECONDARY INFORMATION:
 
@@ -49,6 +49,15 @@ PROPERTY TYPE:
 - For groups of 6 or more guests, ask whether
   they prefer a house or apartment.
 - Never override the user's stated preference.
+- Do not unnecessarily emphasize property type
+  when the group is small.
+
+BEDROOMS:
+- Always ask how many bedrooms the user needs
+  if this information is missing.
+- Never assume the number of bedrooms.
+- Treat bedrooms as an important factor
+  in the price prediction.
 
 BATHROOMS:
 - For groups of 1-3 guests, assume one bathroom
@@ -56,18 +65,23 @@ BATHROOMS:
 - For groups of 4 or more guests, ask how many
   bathrooms they prefer.
 - Never override the user's stated preference.
+- Do not unnecessarily emphasize bathrooms
+  for smaller groups.
 
-CHECK-IN DATE:
-- Always ask for the check-in date if it is missing.
-- Accept dates such as "10. desember", "10.12"
-  or "10.12.2026".
-- Pass the original date to predict_price
-  using the parameter checkin_date.
-- Never calculate days until check-in yourself.
-- Python calculates the number of days automatically.
-- If the user does not specify a year, Python uses
-  the next upcoming occurrence of that date.
-- Never assume a check-in date.
+CHECK-IN TIMING:
+- Ask how many days remain until check-in if this
+  information has not been provided.
+- Accept answers such as "14 days", "two weeks"
+  or "14 dager til innsjekking".
+- If the user explicitly provides the number of days,
+  use that exact number.
+- Pass the integer directly to predict_price
+  using the parameter days_til_checkin.
+- Do NOT ask for a calendar date if the user has
+  already provided the number of days.
+- Never invent or assume the number of days.
+- Never calculate the number of days from an
+  assumed booking date.
 - Never use 30 days as a default.
 
 IMPORTANT:
@@ -83,11 +97,13 @@ IMPORTANT:
 PRICE PREDICTION:
 - Always use predict_price for numerical price estimates.
 - Use the parameter names defined by the function.
-- The required date parameter is checkin_date,
-  not days_til_checkin.
+- The required timing parameter is days_til_checkin.
+- Never pass checkin_date to predict_price.
 - Never invent predictions or model results.
 - All prices are in Norwegian kroner (NOK).
 - Present both nightly price and total price.
+- Calculate total price by multiplying the nightly
+  estimate by the number of nights.
 - Keep price explanations short and relevant.
 - Predictions are estimates, not guaranteed prices.
 
@@ -104,7 +120,7 @@ The trained model uses eight features:
 7. latitude
 8. longitude
 
-- Python calculates days_til_checkin from checkin_date.
+- Pass days_til_checkin directly to the model function.
 - The model uses coordinates, not neighbourhood names directly.
 - If exact coordinates are unavailable, the prediction
   function uses representative median coordinates
@@ -195,8 +211,8 @@ def new_chat(role: str):
 
     if not key:
         raise RuntimeError(
-            "GEMINI_API_KEY mangler. "
-            "Legg til API-nøkkelen som miljøvariabel."
+            "GEMINI_API_KEY is missing. "
+            "Add the API key as an environment variable."
         )
 
     _client = genai.Client(api_key=key)
@@ -229,11 +245,12 @@ def send_message_with_retry(chat, message, max_attempts=3):
             wait_seconds = 2 ** (attempt + 1)
 
             print(
-                f"Gemini er midlertidig utilgjengelig. "
-                f"Prøver igjen om {wait_seconds} sekunder..."
+                f"Gemini is temporarily unavailable. "
+                f"Retrying in {wait_seconds} seconds..."
             )
 
             time.sleep(wait_seconds)
+
 
 
 
