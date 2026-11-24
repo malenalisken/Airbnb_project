@@ -1,4 +1,25 @@
-"""Prediction service for the project's existing final gradient boosting model."""
+"""Prediction service for the project's existing final gradient boosting model.
+    IMPORTANT:
+    days_til_checkin must be explicitly provided by the user.
+    Never assume or invent this value.
+
+    Required information:
+      area: Oslo neighbourhood.
+      is_house: True for house, False for apartment.
+      accommodates: Number of guests (1-12).
+      bedrooms: Number of bedrooms.
+      bathrooms: Number of bathrooms.
+      n_nights: Number of nights (1-28).
+      days_til_checkin: Days until check-in, explicitly
+                        confirmed by the user.
+
+    Optional:
+      latitude: Exact latitude.
+      longitude: Exact longitude.
+
+    If days_til_checkin is unknown, ask the user before
+    calling this function.
+    """
 from pathlib import Path
 import joblib
 import numpy as np
