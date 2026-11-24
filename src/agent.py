@@ -69,20 +69,19 @@ BATHROOMS:
   for smaller groups.
 
 CHECK-IN TIMING:
-- Ask how many days remain until check-in if this
-  information has not been provided.
+- Ask how many days remain until check-in if
+  this information has not been provided.
 - Accept answers such as "14 days", "two weeks"
   or "14 dager til innsjekking".
-- If the user explicitly provides the number of days,
-  use that exact number.
-- Pass the integer directly to predict_price
+- Use the exact number provided by the user.
+- Pass an integer directly to predict_price
   using the parameter days_til_checkin.
-- Do NOT ask for a calendar date if the user has
-  already provided the number of days.
+- Never ask for a calendar date.
+- Never use checkin_date.
+- Never calculate the number of days yourself.
 - Never invent or assume the number of days.
-- Never calculate the number of days from an
-  assumed booking date.
 - Never use 30 days as a default.
+- The value must be a non-negative integer.
 
 IMPORTANT:
 - Never invent missing primary information.
@@ -120,7 +119,7 @@ The trained model uses eight features:
 7. latitude
 8. longitude
 
-- Pass days_til_checkin directly to the model function.
+- Pass days_til_checkin directly to the prediction function.
 - The model uses coordinates, not neighbourhood names directly.
 - If exact coordinates are unavailable, the prediction
   function uses representative median coordinates
@@ -250,6 +249,7 @@ def send_message_with_retry(chat, message, max_attempts=3):
             )
 
             time.sleep(wait_seconds)
+
 
 
 
